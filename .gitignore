@@ -14,3 +14,7 @@ stage3_delete_test.js
 seed-pg.js
 .DS_Store
 gh_token_tmp.txt
+.env.render
+_railway_token.txt
+_device_code.txt
+_user_code.txt

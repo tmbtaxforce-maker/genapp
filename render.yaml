@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: genapp
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: APP_URL
+        value: https://genapp.onrender.com
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase: genapp-db
+      - key: PORT
+        value: "10000"
+    plan: free
+    autoDeploy: true
+    branch: main
+
+  - type: postgres
+    name: genapp-db
+    plan: free
+    region: oregon
+    branch: main
