@@ -1,0 +1,20 @@
+{
+  "name": "genapp",
+  "version": "1.0.0",
+  "description": "GenApp diesel management — Express + bcryptjs + SQLite backend with real-time SSE.",
+  "main": "auth-server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node auth-server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0"
+  }
+}
