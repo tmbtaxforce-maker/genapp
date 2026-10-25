@@ -1,0 +1,16 @@
+node_modules/
+auth.db
+*.db
+*.db-journal
+cookies.txt
+server.log
+nul
+OLD/
+genapp.zip
+fly.toml
+.flyignore
+.dockerignore
+stage3_delete_test.js
+seed-pg.js
+.DS_Store
+gh_token_tmp.txt
