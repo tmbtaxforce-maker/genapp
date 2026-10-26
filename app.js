@@ -1913,12 +1913,12 @@ function renderChart(canvasId, labels, data, colors, title) {
     const chartHeight = rect.height - padding * 2;
     const maxValue = Math.max.apply(null, data) * 1.2;
 
-    // Clear
-    ctx.fillStyle = '#121212';
+    // Clear chart background to white for white theme
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, rect.width, rect.height);
 
     if (data.length === 0 || maxValue === 0) {
-        ctx.fillStyle = '#a0a0a0';
+        ctx.fillStyle = '#808080';
         ctx.font = '12px Segoe UI';
         ctx.textAlign = 'center';
         ctx.fillText(t('reports.noReportData'), rect.width / 2, rect.height / 2);
@@ -1931,8 +1931,8 @@ function renderChart(canvasId, labels, data, colors, title) {
     ctx.textAlign = 'center';
     ctx.fillText(title || t('reports.chartTitle'), rect.width / 2, 20);
 
-    // Draw axes
-    ctx.strokeStyle = '#404040';
+    // Draw axes (lighter for white theme)
+    ctx.strokeStyle = '#cccccc';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padding, padding);
@@ -1953,13 +1953,13 @@ function renderChart(canvasId, labels, data, colors, title) {
         ctx.fillRect(x, y, barWidth, barHeight);
 
         // Value label
-        ctx.fillStyle = '#e0e0e0';
+        ctx.fillStyle = '#404040';
         ctx.font = '10px Segoe UI';
         ctx.textAlign = 'center';
         ctx.fillText(formatCurrency(value), x + barWidth / 2, y - 5);
 
         // Label
-        ctx.fillStyle = '#a0a0a0';
+        ctx.fillStyle = '#808080';
         ctx.font = '10px Segoe UI';
         ctx.save();
         ctx.translate(x + barWidth / 2, rect.height - padding + 15);
@@ -1970,7 +1970,7 @@ function renderChart(canvasId, labels, data, colors, title) {
     });
 
     // Y-axis labels
-    ctx.fillStyle = '#707070';
+    ctx.fillStyle = '#a0a0a0';
     ctx.font = '10px Segoe UI';
     ctx.textAlign = 'right';
     for (let i = 0; i <= 4; i++) {
