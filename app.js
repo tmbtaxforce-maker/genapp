@@ -1,4 +1,15 @@
 // ========================
+// Hide VibeKit badge (injected inline style with !important, CSS can't override)
+// ========================
+(function removeVibeKitBadge() {
+    var badge = document.querySelector('a[data-vibekit-badge]');
+    if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
+    // Also remove the badge-fit script to prevent re-injection
+    var scripts = document.querySelectorAll('script[data-vibekit-badge-fit]');
+    scripts.forEach(function(s) { s.parentNode && s.parentNode.removeChild(s); });
+})();
+
+// ========================
 // GLOBAL STATE
 // ========================
 let state = {

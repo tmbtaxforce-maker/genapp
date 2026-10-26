@@ -58,9 +58,12 @@ html, body {
 body { background: var(--white); color: var(--text-primary); overflow-x: hidden; }
 
 /* Hide VibeKit badge/banner injected by platform */
-[data-vk-lr], [data-vk-badge-fit], [data-vibekit-badge-fit] { display: none !important; }
-[data-vk-banner] { display: none !important; }
-.vk-badge, .vk-watermark, .vibekit-badge { display: none !important; }
+[data-vk-lr]{display:none!important}
+[data-vk-banner]{display:none!important}
+[data-vibekit-badge-fit]{display:none!important}
+a[data-vibekit-badge]{display:none!important}
+[data-vk-name]{display:none!important}
+.vk-badge,.vibekit-badge,.vk-watermark{display:none!important}
 /* Hide any element VibeKit injects at the end of body */
 body > div[style*="z-index"][style*="fixed"]:last-child,
 body > div[style*="z-index"][style*="fixed"]:last-child ~ * { display: none !important; }
