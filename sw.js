@@ -4,7 +4,7 @@
  * - Network-first for /api/ calls (with cache fallback when offline)
  * - Cache-first for static assets
  */
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = 'genapp-shell-' + CACHE_VERSION;
 const API_CACHE = 'genapp-api-' + CACHE_VERSION;
 
