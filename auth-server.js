@@ -13,6 +13,7 @@ const helmet  = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app   = express();
+app.set('trust proxy', 1);  // VibeKit load balancer sets X-Forwarded-For
 const PORT  = process.env.PORT || 8000;
 const SALT  = 10;
 const COOKIE_SECRET = process.env.COOKIE_SECRET || crypto.randomBytes(32).toString('hex');

@@ -929,8 +929,6 @@ function renderSidebar() {
         return '<li class="nav-item"><a href="#" class="nav-link ' + active + '" data-action="navigateTo" data-args="\'' + page + '\'"><span class="nav-icon">' + icon + '</span><span class="nav-text">' + t('nav.' + page) + '</span></a></li>';
     }).join('');
     document.getElementById('nav-menu').innerHTML = nav;
-    const logoutText = document.getElementById('logout-text');
-    if (logoutText) logoutText.textContent = t('nav.logout');
 }
 
 function navigateTo(page) {
