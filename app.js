@@ -313,11 +313,15 @@ const translations = {
         },
         login: {
             title: 'Login',
-            subtitle: 'Sign in with your Google account',
-            googleButton: 'Sign in with Google',
-            error: 'Login failed. Please try again.',
-            errorEmpty: 'Please sign in with Google.',
-            hint: 'Powered by Firebase Authentication'
+            subtitle: 'Sign in to your account',
+            username: 'Username',
+            password: 'Password',
+            usernameHint: 'Enter username',
+            passwordHint: 'Enter password',
+            button: 'Login',
+            error: 'Invalid username or password.',
+            errorEmpty: 'Please enter username and password.',
+            hint: 'Demo credentials: admin / admin123'
         },
         settings: {
             pricingConfig: 'Pricing Configuration',
@@ -657,11 +661,15 @@ const translations = {
         },
         login: {
             title: 'Masuk',
-            subtitle: 'Masuk dengan Akun Google Anda',
-            googleButton: 'Masuk dengan Google',
-            error: 'Masuk gagal. Silakan coba lagi.',
-            errorEmpty: 'Silakan masuk dengan Google.',
-            hint: 'Didukung oleh Firebase Authentication'
+            subtitle: 'Masuk ke akun Anda',
+            username: 'Nama Pengguna',
+            password: 'Kata Sandi',
+            usernameHint: 'Masukkan nama pengguna',
+            passwordHint: 'Masukkan kata sandi',
+            button: 'Masuk',
+            error: 'Nama pengguna atau kata sandi salah.',
+            errorEmpty: 'Harap masukkan nama pengguna dan kata sandi.',
+            hint: 'Kredensial demo: admin / admin123'
         },
         settings: {
             pricingConfig: 'Konfigurasi Harga',
@@ -1002,9 +1010,9 @@ function switchUser(userType) {
 }
 
 async function logout() {
-    // tear down Firestore real-time listeners so the session fully ends
-    realtimeUnsubs.forEach(function(unsub) { try { unsub(); } catch(e2) {} });
-    realtimeUnsubs = [];
+    // tear down live SSE subscriptions so the session fully ends (no leaked listeners)
+    realtimeSources.forEach(function(es) { try { es.close(); } catch (e2) {} });
+    realtimeSources = [];
     // optimistic: end the session in the UI now, do NOT block on the network
     state.loggedIn = false;
     state.currentPage = 'login';
@@ -1014,8 +1022,8 @@ async function logout() {
     renderSidebar();
     renderPage();
     updateNav();
-    // best-effort: sign out from Firebase
-    try { await window.FirebaseAuth.signOut(window.FirebaseAuth.auth); } catch(e) {}
+    // best-effort: ask the server to clear the session cookie
+    try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
 }
 
 function logoutWithConfirm() {
@@ -1037,25 +1045,45 @@ function updateHeader() {
 
 function renderLogin() {
     return '<div class="login-wrapper"><div class="login-card"><div class="login-header"><div class="logo-icon">⛽</div><h2>' + t('login.title') + '</h2><div class="login-subtitle">' + t('login.subtitle') + '</div></div><div class="login-body">' +
-        '<button class="btn btn-primary login-btn" id="google-login-btn" data-action="loginUser">' + t('login.googleButton') + '</button>' +
+        '<div class="form-group"><label class="form-label">' + t('login.username') + '</label><input class="input-field" type="text" id="login-username" autocomplete="off" placeholder="' + t('login.usernameHint') + '"></div>' +
+        '<div class="form-group"><label class="form-label">' + t('login.password') + '</label><input class="input-field" type="password" id="login-password" autocomplete="off" placeholder="' + t('login.passwordHint') + '"></div>' +
+        '<button class="btn btn-primary login-btn" data-action="loginUser">' + t('login.button') + '</button>' +
         '<div class="login-error" id="login-error"></div>' +
         '</div><div class="login-footer">' + t('login.hint') + '</div></div></div>';
 }
 
 async function loginUser() {
+    const username = (document.getElementById('login-username').value || '').trim();
+    const password = document.getElementById('login-password').value;
     const err = document.getElementById('login-error');
     if (err) err.textContent = '';
-    const btn = document.getElementById('google-login-btn');
-    if (btn) btn.textContent = 'Signing in...';
+    if (!username || !password) { if (err) err.textContent = t('login.errorEmpty'); return; }
     try {
-        const { GoogleAuthProvider } = window.FirebaseAuth;
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await window.FirebaseAuth.signInWithPopup(window.FirebaseAuth.auth, provider);
-        // onAuthStateChanged in initAuth() handles the rest
+        const resp = await fetch('/api/login', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password })
+        });
+        const data = await resp.json();
+        if (!data.ok || !data.user) {
+            if (err) err.textContent = t('login.error');
+            if (document.getElementById('login-password')) document.getElementById('login-password').value = '';
+            return;
+        }
+        state.currentUser = data.user;                       // server sends user (no password_hash)
+        state.loggedIn = true;
+        state.currentPage = 'dashboard';
+        if (data.user.role === 'admin') { await fetchUsers(); }
+        await syncRemote();
+        subscribeRealtime();
+        saveToLocalStorage();
+        updateHeader();
+        renderSidebar();
+        renderPage();
+        updateNav();
     } catch (e) {
         if (err) err.textContent = t('login.error');
-        if (btn) btn.textContent = t('login.googleButton');
     }
 }
 
@@ -2247,25 +2275,20 @@ async function submitAddUser() {
     const email = document.getElementById('user-email').value;
     const role = document.getElementById('user-role-select').value;
     const password = document.getElementById('user-password').value;
-    if (!username || !name || !email) { alert(t('alerts.invalidQty')); return; }
+    if (!username || !name || !email || !password) { alert(t('alerts.invalidQty')); return; }
     try {
-        const { db, collection, addDoc, serverTimestamp } = window.FirebaseFirestore;
-        const { createUserWithEmailAndPassword } = window.FirebaseAuth;
-        const cred = await createUserWithEmailAndPassword(window.FirebaseAuth.auth, email, password || Math.random().toString(36).slice(2) + state.currentUser.id);
-        const firebaseUser = cred.user;
-        // Create Firestore profile document (password handled by Firebase Auth, NOT stored here)
-        await addDoc(collection(db, 'users'), {
-            firebaseUid: firebaseUser.uid,
-            username: username,
-            name: name,
-            email: email,
-            role: role,
-            created_at: serverTimestamp()
+        const resp = await fetch('/api/users', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, name: name, email: email, role: role, password: password })
         });
+        const data = await resp.json();
+        if (!data.ok) { alert(data.error || t('alerts.noData')); return; }
         await fetchUsers();
         closeAddModal();
         renderPage();
-    } catch (e) { alert(e.message || t('alerts.noData')); }
+    } catch (e) { alert(t('alerts.noData')); }
 }
 
 function editUser(id) {
@@ -2294,14 +2317,20 @@ async function saveUserEdit(id) {
     const password = document.getElementById('user-password').value;
     if (!username || !name || !email) { alert(t('alerts.invalidQty')); return; }
     try {
-        const { db, doc, updateDoc } = window.FirebaseFirestore;
-        const updateData = { username: username, name: name, email: email, role: role };
-        if (password) { updateData.password = password; }   // empty -> keeps existing
-        await updateDoc(doc(db, 'users', id), updateData);
+        const body = { username: username, name: name, email: email, role: role };
+        if (password) { body.password = password; }   // empty -> backend keeps current hash
+        const resp = await fetch('/api/users/' + id, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!data.ok) { alert(data.error || t('alerts.noData')); return; }
         await fetchUsers();
         closeAddModal();
         renderPage();
-    } catch (e) { alert(e.message || t('alerts.noData')); }
+    } catch (e) { alert(t('alerts.noData')); }
 }
 function filterUsers() {
     const roleFilter = document.getElementById('filter-user-role').value;
@@ -2435,32 +2464,17 @@ async function deleteDatabase() {
     if (scopes.length === 0) return;
 
     try {
-        // Firestore: batch-delete documents in the requested scope(s)
-        const { db, collection, getDocs, query, where, deleteDoc, doc, writeBatch } = window.FirebaseFirestore;
-        const batch = writeBatch(db);
+        var resp = await fetch('/api/admin/delete-data', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scope: scopes, dateRange: dateRange }),
+            signal: AbortSignal.timeout(10000)
+        });
+        var data = await resp.json();
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
 
-        if (scopes.includes('transactions')) {
-            const snap = await getDocs(collection(db, 'transactions'));
-            snap.docs.forEach(d => batch.delete(d.ref));
-        }
-        if (scopes.includes('agents')) {
-            const snap = await getDocs(query(collection(db, 'orders'), where('requester_role', '==', 'agent')));
-            snap.docs.forEach(d => batch.delete(d.ref));
-        }
-        if (scopes.includes('clients')) {
-            const snap = await getDocs(query(collection(db, 'orders'), where('requester_role', '==', 'client')));
-            snap.docs.forEach(d => batch.delete(d.ref));
-        }
-        if (scopes.includes('inventory')) {
-            // Inventory is derived from orders/transactions — clear them too
-            const txSnap = await getDocs(collection(db, 'transactions'));
-            const orderSnap = await getDocs(collection(db, 'orders'));
-            txSnap.docs.forEach(d => batch.delete(d.ref));
-            orderSnap.docs.forEach(d => batch.delete(d.ref));
-        }
-
-        await batch.commit();
-
+        if (scopes.includes('transactions')) { state.transactions = []; }
         if (scopes.includes('agents')) { state.agentRequests = []; }
         if (scopes.includes('clients')) { state.clientRequests = []; state.clients = []; }
         if (scopes.includes('inventory')) {
@@ -2849,143 +2863,100 @@ function saveCustomPrice() {
 // ========================
 async function fetchUsers() {
     try {
-        const { collection, query, getDocs } = window.FirebaseFirestore;
-        const db = window.FirebaseFirestore.db;
-        const userSnap = await getDocs(query(collection(db, 'users')));
-        state.users = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Remove any password fields from client state
-        state.users = state.users.map(function(u) {
-            const clean = {};
-            for (const k in u) { if (k !== 'password' && k !== 'password_hash') clean[k] = u[k]; }
-            return clean;
-        });
-        saveToLocalStorage();
+        const resp = await fetch('/api/users', { credentials: 'same-origin' });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (Array.isArray(data.users)) { state.users = data.users; saveToLocalStorage(); }
+        }
     } catch (e) { /* offline: keep cached users */ }
 }
 
 // ========================
 // REMOTE ORDERS / TRANSACTIONS SYNC (backend + SSE)
 // ========================
-// Firestore CRUD helpers (replaces fetch-based API calls)
-// ========================
-
-// Write an order to Firestore (replaces POST /api/orders)
 async function postRealtime(url, data) {
   try {
-    const { db, collection, addDoc, serverTimestamp } = window.FirebaseFirestore;
-    if (url === '/api/orders') {
-      await addDoc(collection(db, 'orders'), { ...data, created_at: serverTimestamp(), status: data.status || 'pending' });
-      return { ok: true };
-    }
-    if (url === '/api/transactions') {
-      await addDoc(collection(db, 'transactions'), { ...data, date: data.date || new Date().toISOString().split('T')[0], status: data.status || 'completed' });
-      return { ok: true };
-    }
-    // Fallback for unknown endpoints
-    return null;
+    const r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data || {}) });
+    if (r.ok) return await r.json();
   } catch (e) { /* backend down/offline: caller falls back to local state */ }
   return null;
 }
-
-// PATCH an order's status/delivered_qty (approve/deliver/verify/complete/fulfill)
+// PATCH an order's status/delivered_qty (approve/deliver/verify/complete/fulfill) -> persisted + broadcast to all roles.
 async function postOrderPatch(id, patch) {
   try {
-    const { db, doc, updateDoc } = window.FirebaseFirestore;
-    await updateDoc(doc(db, 'orders', id), patch);
-    return { ok: true, order: patch };
+    const r = await fetch('/api/orders/' + id, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch || {}) });
+    if (r.ok) return await r.json();
   } catch (e) { /* backend down/offline: caller falls back to local state */ }
   return null;
 }
-
-// Delete a transaction
+// Delete a transaction (try backend DELETE API; fall back to local removal)
 async function deleteTransaction(id) {
   if (!confirm(t('alerts.deleteConfirm'))) return;
-  try {
-    const { db, doc, deleteDoc } = window.FirebaseFirestore;
-    await deleteDoc(doc(db, 'transactions', id));
-  } catch(e) {}
+  try { await fetch('/api/transactions/' + id, { method: 'DELETE', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) }); } catch(e) {}
   state.transactions = (state.transactions || []).filter(function(tx) { return tx.id !== id; });
   saveToLocalStorage();
   renderPage();
 }
-
 // Delete an agent request (order with requester_role='agent')
 async function deleteAgentRequest(reqId) {
   if (!confirm(t('alerts.deleteConfirm'))) return;
-  try {
-    const { db, doc, deleteDoc } = window.FirebaseFirestore;
-    await deleteDoc(doc(db, 'orders', reqId));
-  } catch(e) {}
+  try { await fetch('/api/orders/' + reqId, { method: 'DELETE', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) }); } catch(e) {}
   state.agentRequests = (state.agentRequests || []).filter(function(r) { return r.id !== reqId; });
   state.clientRequests = (state.clientRequests || []).filter(function(r) { return r.id !== reqId; });
   saveToLocalStorage();
   renderPage();
 }
-
-// Delete a client order request
+// Delete a client order request (order with requester_role='client'/type='sale')
 async function deleteClientOrder(reqId) {
   if (!confirm(t('alerts.deleteConfirm'))) return;
-  try {
-    const { db, doc, deleteDoc } = window.FirebaseFirestore;
-    await deleteDoc(doc(db, 'orders', reqId));
-  } catch(e) {}
+  try { await fetch('/api/orders/' + reqId, { method: 'DELETE', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) }); } catch(e) {}
   state.clientRequests = (state.clientRequests || []).filter(function(r) { return r.id !== reqId; });
   saveToLocalStorage();
   renderPage();
 }
-
 // Delete a user (admin only)
 async function deleteUser(id) {
   if (!confirm(t('alerts.deleteConfirm'))) return;
-  try {
-    const { db, doc, deleteDoc } = window.FirebaseFirestore;
-    await deleteDoc(doc(db, 'users', id));
-  } catch(e) {}
+  try { await fetch('/api/users/' + id, { method: 'DELETE', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) }); } catch(e) {}
   state.users = (state.users || []).filter(function(u) { return u.id !== id; });
   saveToLocalStorage();
   renderPage();
 }
-// Firestore: pull shared order + transaction ledger from Firestore (source of truth).
+// Pull the shared order + transaction ledger from the backend (server = source of truth).
 async function syncRemote() {
   try {
-    const { collection, query, getDocs, orderBy } = window.FirebaseFirestore;
-    const db = window.FirebaseFirestore.db;
-    // Orders
-    const ordersSnap = await getDocs(query(collection(db, 'orders'), orderBy('created_at', 'desc')));
-    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (Array.isArray(orders)) {
-      state.clientRequests = orders.filter(function(o) { return (o.requester_role || o.role) === 'client'; }).map(function(o) {
-        const c = state.clients.find(function(c) { return c.name === o.counterparty; });
-        return { id: o.id, clientId: c ? c.id : o.id, clientName: o.counterparty, genQty: o.qty, amount: o.amount, status: o.status || 'pending', date: o.created_at, approvals: [] };
-      });
-      state.agentRequests = orders.filter(function(o) { return (o.requester_role || o.role) === 'agent'; }).map(function(o) {
-        const a = state.agents.find(function(a) { return a.name === o.counterparty; });
-        return { id: o.id, agentId: a ? a.id : o.id, agentName: o.counterparty, genQty: o.qty, amount: o.amount, status: o.status || 'pending', deliveredQty: o.delivered_qty || 0, date: o.created_at, approvals: [] };
-      });
+    const or = await fetch('/api/orders', { credentials: 'same-origin' });
+    if (or.ok) {
+      const { orders } = await or.json();
+      if (Array.isArray(orders)) {
+        state.clientRequests = orders.filter(function(o) { return (o.requester_role || o.role) === 'client'; }).map(function(o) {
+          const c = state.clients.find(function(c) { return c.name === o.counterparty; });
+          return { id: o.id, clientId: c ? c.id : o.id, clientName: o.counterparty, genQty: o.qty, amount: o.amount, status: o.status || 'pending', date: o.created_at, approvals: [] };
+        });
+        state.agentRequests = orders.filter(function(o) { return (o.requester_role || o.role) === 'agent'; }).map(function(o) {
+          const a = state.agents.find(function(a) { return a.name === o.counterparty; });
+          return { id: o.id, agentId: a ? a.id : o.id, agentName: o.counterparty, genQty: o.qty, amount: o.amount, status: o.status || 'pending', deliveredQty: o.delivered_qty || 0, date: o.created_at, approvals: [] };
+        });
+      }
     }
   } catch (e) { /* offline: keep cached requests */ }
   try {
-    const { collection, query, getDocs, orderBy } = window.FirebaseFirestore;
-    const db = window.FirebaseFirestore.db;
-    const txSnap = await getDocs(query(collection(db, 'transactions'), orderBy('date', 'desc')));
-    const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (Array.isArray(transactions)) state.transactions = transactions.map(function(tx) {
-      return { id: tx.id, type: tx.type, counterparty: tx.counterparty, qty: tx.qty, unit: tx.unit || 'gen', rate: tx.rate, amount: tx.amount, status: tx.status || 'completed', date: tx.date };
-    });
+    const tr = await fetch('/api/transactions', { credentials: 'same-origin' });
+    if (tr.ok) {
+      const { transactions } = await tr.json();
+      if (Array.isArray(transactions)) state.transactions = transactions.map(function(tx) {
+        return { id: tx.id, type: tx.type, counterparty: tx.counterparty, qty: tx.qty, unit: tx.unit || 'gen', rate: tx.rate, amount: tx.amount, status: tx.status || 'completed', date: tx.date };
+      });
+    }
   } catch (e) { /* offline: keep cached transactions */ }
   // Sync users (admin only) — ensures agents/users list matches backend after delete
   if (state.currentUser && state.currentUser.role === 'admin') {
     try {
-      const { collection, query, getDocs } = window.FirebaseFirestore;
-      const db = window.FirebaseFirestore.db;
-      const userSnap = await getDocs(query(collection(db, 'users')));
-      state.users = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Remove any password_hash from client state
-      state.users = state.users.map(function(u) {
-        const clean = {};
-        for (const k in u) { if (k !== 'password' && k !== 'password_hash') clean[k] = u[k]; }
-        return clean;
-      });
+      const ur = await fetch('/api/users', { credentials: 'same-origin' });
+      if (ur.ok) {
+        const { users } = await ur.json();
+        if (Array.isArray(users)) state.users = users;
+      }
     } catch (e) { /* offline: keep cached users */ }
   }
   // Sync agents list with backend users — removes stale agents after Delete Database
@@ -2997,48 +2968,35 @@ async function syncRemote() {
   saveToLocalStorage();
   renderPage();
 }
-
-// Firestore real-time listeners (replaces SSE streams)
-let realtimeUnsubs = [];
+// SSE: subscribe to live order/transaction events so every role sees them in realtime.
+let realtimeSources = [];
 function subscribeRealtime() {
+  if (typeof EventSource === 'undefined') return; // browser-only
   try {
-    // tear down any prior listeners
-    realtimeUnsubs.forEach(function(unsub) { try { unsub(); } catch(e2) {} });
-    realtimeUnsubs = [];
-    const { collection, onSnapshot, query, orderBy } = window.FirebaseFirestore;
-    const db = window.FirebaseFirestore.db;
-    // Orders listener
-    const orderUnsub = onSnapshot(query(collection(db, 'orders'), orderBy('created_at', 'desc')), function(snap) {
-      snap.docChanges().forEach(function(change) {
-        const o = { id: change.doc.id, ...change.doc.data() };
-        if (change.type === 'added' || change.type === 'modified') {
-          onRealtimeOrderObj(o);
-        } else if (change.type === 'removed') {
-          onRealtimeOrderDeleteObj(o);
-        }
-      });
-    });
-    // Transactions listener
-    const txUnsub = onSnapshot(query(collection(db, 'transactions'), orderBy('date', 'desc')), function(snap) {
-      snap.docChanges().forEach(function(change) {
-        const tx = { id: change.doc.id, ...change.doc.data() };
-        if (change.type === 'added' || change.type === 'modified') {
-          onRealtimeTransactionObj(tx);
-        } else if (change.type === 'removed') {
-          onRealtimeTransactionDeleteObj(tx);
-        }
-      });
-    });
-    realtimeUnsubs.push(orderUnsub, txUnsub);
-  } catch (e) { /* Firestore unavailable */ }
+    // tear down any prior SSE connections (re-login, or before logout)
+    realtimeSources.forEach(function(es) { try { es.close(); } catch (e2) {} });
+    realtimeSources = [];
+    const es = new EventSource('/api/orders/stream');
+    es.addEventListener('order', onRealtimeOrder);
+    es.addEventListener('order_delete', onRealtimeOrderDelete);
+    es.addEventListener('data_deleted', onDataDeleted);
+    es.onerror = function() {};
+    const et = new EventSource('/api/transactions/stream');
+    et.addEventListener('transaction', onRealtimeTransaction);
+    et.addEventListener('transaction_delete', onRealtimeTransactionDelete);
+    et.addEventListener('data_deleted', onDataDeleted);
+    et.onerror = function() {};
+    realtimeSources.push(es, et);
+  } catch (e) { /* SSE unavailable */ }
 }
-// Firestore order update handler (replaces SSE onRealtimeOrder)
-function onRealtimeOrderObj(o) {
+function onRealtimeOrder(ev) {
   try {
+    const o = JSON.parse(ev.data);
     const isClient = (o.requester_role || o.role) === 'client';
     const target = isClient ? (state.clientRequests = state.clientRequests || []) : (state.agentRequests = state.agentRequests || []);
     const existing = target.find(function(r) { return r.id === o.id; });
     if (existing) {
+      // status change (approve/deliver/verify/complete/fulfill) broadcast by another role -> merge into the existing request
       if (o.status) existing.status = o.status;
       if (o.delivered_qty != null) existing.deliveredQty = o.delivered_qty;
       saveToLocalStorage();
@@ -3054,34 +3012,38 @@ function onRealtimeOrderObj(o) {
       saveToLocalStorage();
       renderPage();
     }
-  } catch (e) { /* malformed */ }
+  } catch (e) { /* malformed event */ }
 }
-// Firestore transaction handler (replaces SSE onRealtimeTransaction)
-function onRealtimeTransactionObj(tx) {
+function onRealtimeTransaction(ev) {
   try {
-    if (state.transactions.find(function(t) { return t.id === tx.id; })) return;
+    const tx = JSON.parse(ev.data);
+    if (state.transactions.find(function(t) { return t.id === tx.id; })) return; // dedupe
     state.transactions.push({ id: tx.id, type: tx.type, counterparty: tx.counterparty, qty: tx.qty, unit: tx.unit || 'gen', rate: tx.rate, amount: tx.amount, status: tx.status || 'completed', date: tx.date });
     saveToLocalStorage();
     renderPage();
-  } catch (e) { /* malformed */ }
+  } catch (e) { /* malformed event */ }
 }
-// Firestore order delete handler (replaces SSE onRealtimeOrderDelete)
-function onRealtimeOrderDeleteObj(o) {
-  state.agentRequests = (state.agentRequests || []).filter(function(r) { return r.id !== o.id; });
-  state.clientRequests = (state.clientRequests || []).filter(function(r) { return r.id !== o.id; });
-  saveToLocalStorage();
-  renderPage();
+// SSE delete events: remove the record from local state across all roles
+function onRealtimeOrderDelete(ev) {
+  try {
+    const o = JSON.parse(ev.data);
+    state.agentRequests = (state.agentRequests || []).filter(function(r) { return r.id !== o.id; });
+    state.clientRequests = (state.clientRequests || []).filter(function(r) { return r.id !== o.id; });
+    saveToLocalStorage();
+    renderPage();
+  } catch (e) { /* malformed event */ }
 }
-// Firestore transaction delete handler (replaces SSE onRealtimeTransactionDelete)
-function onRealtimeTransactionDeleteObj(tx) {
-  state.transactions = (state.transactions || []).filter(function(t) { return t.id !== tx.id; });
-  saveToLocalStorage();
-  renderPage();
+function onRealtimeTransactionDelete(ev) {
+  try {
+    const tx = JSON.parse(ev.data);
+    state.transactions = (state.transactions || []).filter(function(t) { return t.id !== tx.id; });
+    saveToLocalStorage();
+    renderPage();
+  } catch (e) { /* malformed event */ }
 }
 
-// Firebase Auth: check if user is already signed in.
-// Loads user data + inventory from Firestore, not from a session cookie.
-function initAuth() {
+// Server-side session gate: ask the backend who we are (httpOnly cookie).
+async function initAuth() {
     // sanitize any stale plaintext credentials left by the old client-only build
     if (Array.isArray(state.users)) {
         state.users = state.users.map(function(u) {
@@ -3090,69 +3052,25 @@ function initAuth() {
             return clean;
         });
     }
-    return new Promise(function(resolve) {
-        let done = false;
-        const fallback = function() {
-            if (done) return;
-            done = true;
-            // Firebase didn't resolve in time — show login page so app is usable
-            state.loggedIn = false;
-            state.currentUser = { id: null, username: null, name: 'Guest', role: '', avatar: '?' };
-            state.currentPage = 'login';
-            resolve();
-        };
-        // Fallback timeout: 8s is enough for Firebase to fire onAuthStateChanged
-        setTimeout(fallback, 8000);
-        try {
-            window.FirebaseAuth.onAuthStateChanged(window.FirebaseAuth.auth, async function(firebaseUser) {
-                if (done) return;
-                done = true;
-                clearTimeout(window._initAuthTO);
-                if (firebaseUser) {
-                    // Sync user profile from Firestore (or create if new)
-                    const userDoc = await window.FirebaseFirestore.getUserDoc(firebaseUser.uid);
-                    if (userDoc) {
-                        state.currentUser = {
-                            id: userDoc.id || firebaseUser.uid,
-                            username: userDoc.username || firebaseUser.displayName,
-                            name: userDoc.name || firebaseUser.displayName,
-                            role: userDoc.role || 'client',
-                            avatar: userDoc.avatar || (firebaseUser.displayName || '?').charAt(0)
-                        };
-                        state.loggedIn = true;
-                        if (state.currentUser.role === 'admin') { await fetchUsers(); }
-                        await syncRemote();
-                        subscribeRealtime();
-                        if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
-                        saveToLocalStorage();
-                    } else {
-                        // New user — create a Firestore profile with default role
-                        await window.FirebaseFirestore.createUserDoc(firebaseUser);
-                        state.currentUser = {
-                            id: firebaseUser.uid,
-                            username: firebaseUser.displayName || firebaseUser.email,
-                            name: firebaseUser.displayName || firebaseUser.email,
-                            role: 'client',
-                            avatar: (firebaseUser.displayName || firebaseUser.email).charAt(0)
-                        };
-                        state.loggedIn = true;
-                        await syncRemote();
-                        subscribeRealtime();
-                        if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
-                        saveToLocalStorage();
-                    }
-                } else {
-                    state.loggedIn = false;
-                    state.currentUser = { id: null, username: null, name: 'Guest', role: '', avatar: '?' };
-                    state.currentPage = 'login';
-                }
-                resolve();
-            });
-        } catch (e) {
-            // Firebase Auth unavailable — fall back to login page
-            fallback();
+    try {
+        const resp = await fetch('/api/me', { credentials: 'same-origin' });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.user) {
+                state.loggedIn = true;
+                state.currentUser = { id: data.user.id, username: data.user.username, name: data.user.name, role: data.user.role, avatar: data.user.avatar };
+                if (data.user.role === 'admin') { await fetchUsers(); }
+                await syncRemote();
+                subscribeRealtime();
+                if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
+                saveToLocalStorage();
+                return;
+            }
         }
-    });
+    } catch (e) { /* backend down/offline -> show login, never auto-login */ }
+    state.loggedIn = false;
+    state.currentUser = { id: null, username: null, name: 'Guest', role: '', avatar: '?' };
+    state.currentPage = 'login';
 }
 
 
@@ -3165,8 +3083,7 @@ if ('serviceWorker' in navigator) {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadFromLocalStorage();
-    // Render login page immediately so the user sees content while Firebase initializes
-    state.currentPage = state.currentPage || 'login';
+    // Render immediately so user sees content while auth check runs
     renderPage();
     initAuth().then(function() {
         updateHeader();
@@ -3326,8 +3243,8 @@ const _inlineApi = {
     deleteAgentRequest,
     deleteClientOrder,
     deleteUser,
-    onRealtimeOrderDeleteObj,
-    onRealtimeTransactionDeleteObj,
+    onRealtimeOrderDelete,
+    onRealtimeTransactionDelete,
     showAddClientModal,
     submitAddClient,
     viewClientOrders,
