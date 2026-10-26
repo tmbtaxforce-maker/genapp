@@ -3085,6 +3085,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFromLocalStorage();
     // Render immediately so user sees content while auth check runs
     renderPage();
+    if (state.loggedIn) { renderSidebar(); updateHeader(); updateNav(); }
     initAuth().then(function() {
         updateHeader();
         renderSidebar();
