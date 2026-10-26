@@ -3091,47 +3091,67 @@ function initAuth() {
         });
     }
     return new Promise(function(resolve) {
-        window.FirebaseAuth.onAuthStateChanged(window.FirebaseAuth.auth, async function(firebaseUser) {
-            if (firebaseUser) {
-                // Sync user profile from Firestore (or create if new)
-                const userDoc = await window.FirebaseFirestore.getUserDoc(firebaseUser.uid);
-                if (userDoc) {
-                    state.currentUser = {
-                        id: userDoc.id || firebaseUser.uid,
-                        username: userDoc.username || firebaseUser.displayName,
-                        name: userDoc.name || firebaseUser.displayName,
-                        role: userDoc.role || 'client',
-                        avatar: userDoc.avatar || (firebaseUser.displayName || '?').charAt(0)
-                    };
-                    state.loggedIn = true;
-                    if (state.currentUser.role === 'admin') { await fetchUsers(); }
-                    await syncRemote();
-                    subscribeRealtime();
-                    if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
-                    saveToLocalStorage();
-                } else {
-                    // New user — create a Firestore profile with default role
-                    await window.FirebaseFirestore.createUserDoc(firebaseUser);
-                    state.currentUser = {
-                        id: firebaseUser.uid,
-                        username: firebaseUser.displayName || firebaseUser.email,
-                        name: firebaseUser.displayName || firebaseUser.email,
-                        role: 'client',
-                        avatar: (firebaseUser.displayName || firebaseUser.email).charAt(0)
-                    };
-                    state.loggedIn = true;
-                    await syncRemote();
-                    subscribeRealtime();
-                    if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
-                    saveToLocalStorage();
-                }
-            } else {
-                state.loggedIn = false;
-                state.currentUser = { id: null, username: null, name: 'Guest', role: '', avatar: '?' };
-                state.currentPage = 'login';
-            }
+        let done = false;
+        const fallback = function() {
+            if (done) return;
+            done = true;
+            // Firebase didn't resolve in time — show login page so app is usable
+            state.loggedIn = false;
+            state.currentUser = { id: null, username: null, name: 'Guest', role: '', avatar: '?' };
+            state.currentPage = 'login';
             resolve();
-        });
+        };
+        // Fallback timeout: 8s is enough for Firebase to fire onAuthStateChanged
+        setTimeout(fallback, 8000);
+        try {
+            window.FirebaseAuth.onAuthStateChanged(window.FirebaseAuth.auth, async function(firebaseUser) {
+                if (done) return;
+                done = true;
+                clearTimeout(window._initAuthTO);
+                if (firebaseUser) {
+                    // Sync user profile from Firestore (or create if new)
+                    const userDoc = await window.FirebaseFirestore.getUserDoc(firebaseUser.uid);
+                    if (userDoc) {
+                        state.currentUser = {
+                            id: userDoc.id || firebaseUser.uid,
+                            username: userDoc.username || firebaseUser.displayName,
+                            name: userDoc.name || firebaseUser.displayName,
+                            role: userDoc.role || 'client',
+                            avatar: userDoc.avatar || (firebaseUser.displayName || '?').charAt(0)
+                        };
+                        state.loggedIn = true;
+                        if (state.currentUser.role === 'admin') { await fetchUsers(); }
+                        await syncRemote();
+                        subscribeRealtime();
+                        if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
+                        saveToLocalStorage();
+                    } else {
+                        // New user — create a Firestore profile with default role
+                        await window.FirebaseFirestore.createUserDoc(firebaseUser);
+                        state.currentUser = {
+                            id: firebaseUser.uid,
+                            username: firebaseUser.displayName || firebaseUser.email,
+                            name: firebaseUser.displayName || firebaseUser.email,
+                            role: 'client',
+                            avatar: (firebaseUser.displayName || firebaseUser.email).charAt(0)
+                        };
+                        state.loggedIn = true;
+                        await syncRemote();
+                        subscribeRealtime();
+                        if (!state.currentPage || state.currentPage === 'login') { state.currentPage = 'dashboard'; }
+                        saveToLocalStorage();
+                    }
+                } else {
+                    state.loggedIn = false;
+                    state.currentUser = { id: null, username: null, name: 'Guest', role: '', avatar: '?' };
+                    state.currentPage = 'login';
+                }
+                resolve();
+            });
+        } catch (e) {
+            // Firebase Auth unavailable — fall back to login page
+            fallback();
+        }
     });
 }
 
@@ -3145,6 +3165,9 @@ if ('serviceWorker' in navigator) {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadFromLocalStorage();
+    // Render login page immediately so the user sees content while Firebase initializes
+    state.currentPage = state.currentPage || 'login';
+    renderPage();
     initAuth().then(function() {
         updateHeader();
         renderSidebar();
