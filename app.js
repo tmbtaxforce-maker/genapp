@@ -2253,14 +2253,13 @@ async function submitAddUser() {
         const { createUserWithEmailAndPassword } = window.FirebaseAuth;
         const cred = await createUserWithEmailAndPassword(window.FirebaseAuth.auth, email, password || Math.random().toString(36).slice(2) + state.currentUser.id);
         const firebaseUser = cred.user;
-        // Create Firestore profile document (no password stored here)
+        // Create Firestore profile document (password handled by Firebase Auth, NOT stored here)
         await addDoc(collection(db, 'users'), {
             firebaseUid: firebaseUser.uid,
             username: username,
             name: name,
             email: email,
             role: role,
-            password: password || Math.random().toString(36).slice(2),
             created_at: serverTimestamp()
         });
         await fetchUsers();
