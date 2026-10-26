@@ -875,7 +875,7 @@ function showAddModal(title, fields, buttons) {
             }
             html += '</select>';
         } else {
-            html += '<input type="' + (f.type || 'text') + '" class="input-field" id="' + f.id + '" placeholder="' + (f.placeholder || '') + '" value="' + (f.value || '') + '" min="0" inputmode="numeric" pattern="[0-9.]*" oninput="' + (f.type === 'text' && f.id && (f.id.indexOf('qty') > -1 || f.id.indexOf('rate') > -1 || f.id.indexOf('amount') > -1 || f.id.indexOf('price') > -1) ? 'formatThousandsInput(this)' : '') + '">';
+            html += '<input type="' + (f.type || 'text') + '" class="input-field" id="' + f.id + '" placeholder="' + (f.placeholder || '') + '" value="' + (f.value || '') + '" min="0" inputmode="numeric" pattern="[0-9.]*" data-input="' + (f.type === 'text' && f.id && (f.id.indexOf('qty') > -1 || f.id.indexOf('rate') > -1 || f.id.indexOf('amount') > -1 || f.id.indexOf('price') > -1) ? 'formatThousandsInput(this)' : '') + '">';
         }
         html += '</div>';
     }
@@ -886,8 +886,8 @@ function showAddModal(title, fields, buttons) {
     if (buttons) {
         footer = buttons;
     } else {
-        footer = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button>';
-        footer += '<button class="btn btn-primary" onclick="submitAddModal()">Submit</button>';
+        footer = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button>';
+        footer += '<button class="btn btn-primary" data-action="submitAddModal">Submit</button>';
     }
     document.getElementById('modal-footer').innerHTML = footer;
 
@@ -926,7 +926,7 @@ function renderSidebar() {
     const nav = allowedPages.map(function(page) {
         const icon = navIcons[page] || '•';
         const active = state.currentPage === page ? 'active' : '';
-        return '<li class="nav-item"><a href="#" class="nav-link ' + active + '" onclick="navigateTo(\'' + page + '\')"><span class="nav-icon">' + icon + '</span><span class="nav-text">' + t('nav.' + page) + '</span></a></li>';
+        return '<li class="nav-item"><a href="#" class="nav-link ' + active + '" data-action="navigateTo" data-args="\'' + page + '\'"><span class="nav-icon">' + icon + '</span><span class="nav-text">' + t('nav.' + page) + '</span></a></li>';
     }).join('');
     document.getElementById('nav-menu').innerHTML = nav;
     const logoutText = document.getElementById('logout-text');
@@ -970,7 +970,7 @@ function updateNav() {
 
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(function(link) { link.classList.remove('active'); });
-    const activeLink = document.querySelector('.nav-link[onclick="navigateTo(\'' + state.currentPage + '\'"]');
+    const activeLink = document.querySelector('.nav-link[data-action="navigateTo(\'' + state.currentPage + '\'"]');
     if (activeLink) activeLink.classList.add('active');
 }
 
@@ -1038,7 +1038,7 @@ function renderLogin() {
     return '<div class="login-wrapper"><div class="login-card"><div class="login-header"><div class="logo-icon">⛽</div><h2>' + t('login.title') + '</h2><div class="login-subtitle">' + t('login.subtitle') + '</div></div><div class="login-body">' +
         '<div class="form-group"><label class="form-label">' + t('login.username') + '</label><input class="input-field" type="text" id="login-username" autocomplete="off" placeholder="' + t('login.usernameHint') + '"></div>' +
         '<div class="form-group"><label class="form-label">' + t('login.password') + '</label><input class="input-field" type="password" id="login-password" autocomplete="off" placeholder="' + t('login.passwordHint') + '"></div>' +
-        '<button class="btn btn-primary login-btn" onclick="loginUser()">' + t('login.button') + '</button>' +
+        '<button class="btn btn-primary login-btn" data-action="loginUser">' + t('login.button') + '</button>' +
         '<div class="login-error" id="login-error"></div>' +
         '</div><div class="login-footer">' + t('login.hint') + '</div></div></div>';
 }
@@ -1133,7 +1133,7 @@ function renderAdminDashboard() {
         <div class="widget"><div class="widget-header"><span class="widget-title">${t('dashboard.availDiesel')}</span>⛽</div><div class="widget-value">${formatNumber(state.inventory.availGen)} GEN</div><div class="widget-change change-negative">↓ ${dieselUtil}% ${t('dashboard.used')}</div></div>
     </div>
     <div class="table-container">
-        <div class="table-header"><div class="table-title">${t('dashboard.recentTrans')}</div><div class="table-actions"><button class="btn btn-secondary btn-sm" onclick="navigateTo('transactions')">${t('dashboard.viewAll')}</button></div></div>
+        <div class="table-header"><div class="table-title">${t('dashboard.recentTrans')}</div><div class="table-actions"><button class="btn btn-secondary btn-sm" data-action="navigateTo" data-args="'transactions'">${t('dashboard.viewAll')}</button></div></div>
         <div class="table-scrollable"><table>
             <thead><tr><th>${t('table.date')}</th><th>${t('table.type')}</th><th>${t('table.counterparty')}</th><th>${t('table.quantity')}</th><th>${t('table.rate')}</th><th>${t('table.amount')}</th><th>${t('table.status')}</th></tr></thead>
             <tbody>${state.transactions.slice(0, 5).map(function(tr) {
@@ -1192,7 +1192,7 @@ function renderAgentDashboard() {
         <div class="widget"><div class="widget-header"><span class="widget-title">${t('dashboard.quotaToFulfill')}</span>📊</div><div class="widget-value text-yellow">${formatNumber(remainingGen)} GEN</div><div class="widget-change change-positive">${completedGen} / ${targetGen} GEN (${fulfillmentPercent}%)</div></div>
     </div>
     <div class="table-container">
-        <div class="table-header"><div class="table-title">${t('dashboard.myTransactions')}</div><div class="table-actions"><button class="btn btn-secondary btn-sm" onclick="navigateTo('requestGen')">${t('agents.sendRequest')}</button></div></div>
+        <div class="table-header"><div class="table-title">${t('dashboard.myTransactions')}</div><div class="table-actions"><button class="btn btn-secondary btn-sm" data-action="navigateTo" data-args="'requestGen'">${t('agents.sendRequest')}</button></div></div>
         <div class="table-scrollable"><table>
             <thead><tr><th>${t('table.date')}</th><th>${t('table.type')}</th><th>${t('table.quantity')}</th><th>${t('table.amount')}</th><th>${t('table.status')}</th></tr></thead>
             <tbody>${agentTrans.length === 0 ? '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:2rem;">' + t('alerts.noData') + '</td></tr>' : agentTrans.map(function(tr) {
@@ -1223,13 +1223,13 @@ function renderTransactions() {
     if (typeFilter) filteredTrans = filteredTrans.filter(function(tr) { return tr.type === typeFilter; });
     if (statusFilter) filteredTrans = filteredTrans.filter(function(tr) { return tr.status === statusFilter; });
 
-    const addButton = isClientOrAgent ? '' : '<button class="btn btn-primary btn-sm" onclick="showAddTransactionModal()">+ ' + t('alerts.addTransaction') + '</button>';
+    const addButton = isClientOrAgent ? '' : '<button class="btn btn-primary btn-sm" data-action="showAddTransactionModal">+ ' + t('alerts.addTransaction') + '</button>';
     const filterSection = isClientOrAgent ? '' : `
         <div class="filter-bar">
-            <div class="form-group"><label class="form-label">${t('alerts.filterByType')}</label><select class="input-field" id="filter-trans-type" onchange="filterTransactions()"><option value="">${t('alerts.filterAll')}</option><option value="sale">${t('reports.sale')}</option><option value="purchase">${t('reports.purchase')}</option></select></div>
-            <div class="form-group"><label class="form-label">${t('alerts.filterByStatus')}</label><select class="input-field" id="filter-trans-status" onchange="filterTransactions()"><option value="">${t('alerts.filterAll')}</option><option value="completed">Completed</option><option value="pending">${t('agents.due')}</option></select></div>
-            <div class="form-group"><label class="form-label">${t('reports.dateRange')}</label><select class="input-field" id="filter-trans-date" onchange="filterTransactions()"><option value="all" ${transFilter === 'all' ? 'selected' : ''}>${t('reports.allData')}</option><option value="week" ${transFilter === 'week' ? 'selected' : ''}>${t('alerts.week')}</option><option value="month" ${transFilter === 'month' ? 'selected' : ''}>${t('alerts.month')}</option><option value="last_month" ${transFilter === 'last_month' ? 'selected' : ''}>${t('alerts.lastMonth')}</option><option value="today" ${transFilter === 'today' ? 'selected' : ''}>${t('alerts.today')}</option></select></div>
-            <button class="btn btn-secondary btn-sm" onclick="clearTransactionFilters()">${t('alerts.filterClear')}</button>
+            <div class="form-group"><label class="form-label">${t('alerts.filterByType')}</label><select class="input-field" id="filter-trans-type" data-change="filterTransactions"><option value="">${t('alerts.filterAll')}</option><option value="sale">${t('reports.sale')}</option><option value="purchase">${t('reports.purchase')}</option></select></div>
+            <div class="form-group"><label class="form-label">${t('alerts.filterByStatus')}</label><select class="input-field" id="filter-trans-status" data-change="filterTransactions"><option value="">${t('alerts.filterAll')}</option><option value="completed">Completed</option><option value="pending">${t('agents.due')}</option></select></div>
+            <div class="form-group"><label class="form-label">${t('reports.dateRange')}</label><select class="input-field" id="filter-trans-date" data-change="filterTransactions"><option value="all" ${transFilter === 'all' ? 'selected' : ''}>${t('reports.allData')}</option><option value="week" ${transFilter === 'week' ? 'selected' : ''}>${t('alerts.week')}</option><option value="month" ${transFilter === 'month' ? 'selected' : ''}>${t('alerts.month')}</option><option value="last_month" ${transFilter === 'last_month' ? 'selected' : ''}>${t('alerts.lastMonth')}</option><option value="today" ${transFilter === 'today' ? 'selected' : ''}>${t('alerts.today')}</option></select></div>
+            <button class="btn btn-secondary btn-sm" data-action="clearTransactionFilters">${t('alerts.filterClear')}</button>
         </div>`;
 
     return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('titles.transactions')}</h2>${addButton}</div>
@@ -1237,7 +1237,7 @@ function renderTransactions() {
         <div class="table-container"><div class="table-scrollable"><table>
             <thead><tr><th>${t('table.date')}</th><th>${t('table.type')}</th><th>${t('table.counterparty')}</th><th>${t('table.quantity')}</th><th>${t('table.unit')}</th><th>${t('table.ratePerGen')}</th><th>${t('table.amount')}</th><th>${t('table.status')}</th>${!isClientOrAgent ? '<th>' + t('table.actions') + '</th>' : ''}</tr></thead>
             <tbody id="transactions-tbody">${filteredTrans.map(function(tr) {
-                return '<tr><td>' + tr.date + '</td><td><span class="text-' + (tr.type === 'sale' ? 'green' : 'yellow') + '">' + (tr.type === 'sale' ? '🔼 ' + t('reports.sale') : '🔽 ' + t('reports.purchase')) + '</span></td><td>' + escapeHtml(tr.counterparty) + '</td><td>' + formatNumber(tr.qty) + '</td><td>' + tr.unit + '</td><td>' + formatCurrency(tr.rate) + '</td><td>' + formatCurrency(tr.amount) + '</td><td><span class="status-badge status-' + tr.status + '">' + tr.status + '</span></td>' + (!isClientOrAgent ? '<td><button class="btn btn-secondary btn-xs" onclick="editTransaction(' + tr.id + ')">' + t('users.edit') + '</button><button class="btn btn-danger btn-xs" onclick="deleteTransaction(' + tr.id + ')">' + t('alerts.deleteItem') + '</button></td>' : '') + '</tr>';
+                return '<tr><td>' + tr.date + '</td><td><span class="text-' + (tr.type === 'sale' ? 'green' : 'yellow') + '">' + (tr.type === 'sale' ? '🔼 ' + t('reports.sale') : '🔽 ' + t('reports.purchase')) + '</span></td><td>' + escapeHtml(tr.counterparty) + '</td><td>' + formatNumber(tr.qty) + '</td><td>' + tr.unit + '</td><td>' + formatCurrency(tr.rate) + '</td><td>' + formatCurrency(tr.amount) + '</td><td><span class="status-badge status-' + tr.status + '">' + tr.status + '</span></td>' + (!isClientOrAgent ? '<td><button class="btn btn-secondary btn-xs" data-action="editTransaction" data-args="' + tr.id + '">' + t('users.edit') + '</button><button class="btn btn-danger btn-xs" data-action="deleteTransaction" data-args="' + tr.id + '">' + t('alerts.deleteItem') + '</button></td>' : '') + '</tr>';
             }).join('')}</tbody>
         </table></div></div>`;
 }
@@ -1251,7 +1251,7 @@ function showAddTransactionModal() {
         { label: t('table.status'), id: 'trans-status', type: 'select', options: [{ value: 'completed', label: t('users.active') }, { value: 'pending', label: t('agents.due') }, { value: 'cancelled', label: 'Cancelled' }] },
         { label: t('table.date'), id: 'trans-date', type: 'date' }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" onclick="submitAddTransaction()">' + t('alerts.addTransaction') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" data-action="submitAddTransaction">' + t('alerts.addTransaction') + '</button>';
     showAddModal(t('alerts.addTransaction'), fields, footerHtml);
 }
 
@@ -1286,7 +1286,7 @@ function editTransaction(id) {
         { label: t('table.ratePerGen'), id: 'edit-trans-rate', type: 'text', value: formatCurrency(tr.rate).replace('Rp ', ''), placeholder: 'Enter rate' },
         { label: t('table.status'), id: 'edit-trans-status', type: 'select', options: [{ value: 'completed', label: 'Completed' }, { value: 'pending', label: t('agents.due') }, { value: 'cancelled', label: 'Cancelled' }], value: tr.status }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" onclick="saveTransactionEdit(' + tr.id + ')">' + t('users.edit') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" data-action="saveTransactionEdit" data-args="' + tr.id + '">' + t('users.edit') + '</button>';
     showAddModal(t('alerts.viewDetails'), fields, footerHtml);
 }
 
@@ -1317,7 +1317,7 @@ function filterTransactions() {
     const tbody = document.getElementById('transactions-tbody');
     if (tbody) {
         tbody.innerHTML = filtered.map(function(tr) {
-            return '<tr><td>' + tr.date + '</td><td><span class="text-' + (tr.type === 'sale' ? 'green' : 'yellow') + '">' + (tr.type === 'sale' ? '🔼 ' + t('reports.sale') : '🔽 ' + t('reports.purchase')) + '</span></td><td>' + escapeHtml(tr.counterparty) + '</td><td>' + formatNumber(tr.qty) + '</td><td>' + tr.unit + '</td><td>' + formatCurrency(tr.rate) + '</td><td>' + formatCurrency(tr.amount) + '</td><td><span class="status-badge status-' + tr.status + '">' + tr.status + '</span></td><td><button class="btn btn-secondary btn-xs" onclick="editTransaction(' + tr.id + ')">' + t('users.edit') + '</button><button class="btn btn-danger btn-xs" onclick="deleteTransaction(' + tr.id + ')">' + t('alerts.deleteItem') + '</button></td></tr>';
+            return '<tr><td>' + tr.date + '</td><td><span class="text-' + (tr.type === 'sale' ? 'green' : 'yellow') + '">' + (tr.type === 'sale' ? '🔼 ' + t('reports.sale') : '🔽 ' + t('reports.purchase')) + '</span></td><td>' + escapeHtml(tr.counterparty) + '</td><td>' + formatNumber(tr.qty) + '</td><td>' + tr.unit + '</td><td>' + formatCurrency(tr.rate) + '</td><td>' + formatCurrency(tr.amount) + '</td><td><span class="status-badge status-' + tr.status + '">' + tr.status + '</span></td><td><button class="btn btn-secondary btn-xs" data-action="editTransaction" data-args="' + tr.id + '">' + t('users.edit') + '</button><button class="btn btn-danger btn-xs" data-action="deleteTransaction" data-args="' + tr.id + '">' + t('alerts.deleteItem') + '</button></td></tr>';
         }).join('');
     }
 }
@@ -1340,7 +1340,7 @@ function renderAgents() {
     const dieselCostPerGen = getDieselCostForGen();
     const adminProfit = avgRate - dieselCostPerGen;
 
-    return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('agents.myAgents')}</h2><button class="btn btn-primary btn-sm" onclick="showAddAgentModal()">+ ${t('agents.addAgent')}</button></div>
+    return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('agents.myAgents')}</h2><button class="btn btn-primary btn-sm" data-action="showAddAgentModal">+ ${t('agents.addAgent')}</button></div>
         <div class="widgets-grid" style="margin-bottom: 2rem;">
             <div class="widget"><div class="widget-header"><span class="widget-title">${t('agents.totalAgentDiesel')}</span>⛽</div><div class="widget-value">${formatNumber(totalAgentGen)} GEN</div></div>
             <div class="widget"><div class="widget-header"><span class="widget-title">${t('agents.avgRate')}</span>💰</div><div class="widget-value">${formatCurrency(avgRate)}</div><div class="widget-change">${t('agents.agentPays')}</div></div>
@@ -1353,14 +1353,14 @@ function renderAgents() {
             <div class="table-scrollable"><table>
                 <thead><tr><th>${t('agents.agentName')}</th><th>${t('agents.genQty')}</th><th>${t('agents.litersQty')}</th><th>${t('agents.balance')}</th><th>${t('table.status')}</th><th>${t('table.actions')}</th></tr></thead>
                 <tbody>${state.agents.map(function(agent) {
-                    return '<tr><td>' + escapeHtml(agent.name) + '</td><td>' + formatNumber(agent.genQty) + ' GEN</td><td>' + formatNumber(agent.litersQty) + ' L</td><td class="' + (agent.balance > 0 ? 'text-yellow' : 'text-green') + '">' + (agent.balance > 0 ? formatCurrency(agent.balance) + ' (' + t('agents.due') + ')' : t('agents.paid')) + '</td><td><span class="status-badge status-' + agent.status + '">' + agent.status + '</span></td><td><button class="btn btn-secondary btn-xs" onclick="viewAgentDetails(' + agent.id + ')">' + t('agents.view') + '</button>' + (agent.balance > 0 ? '<button class="btn btn-danger btn-xs" onclick="payAgent(' + agent.id + ')">' + t('agents.pay') + '</button>' : '') + '</td></tr>';
+                    return '<tr><td>' + escapeHtml(agent.name) + '</td><td>' + formatNumber(agent.genQty) + ' GEN</td><td>' + formatNumber(agent.litersQty) + ' L</td><td class="' + (agent.balance > 0 ? 'text-yellow' : 'text-green') + '">' + (agent.balance > 0 ? formatCurrency(agent.balance) + ' (' + t('agents.due') + ')' : t('agents.paid')) + '</td><td><span class="status-badge status-' + agent.status + '">' + agent.status + '</span></td><td><button class="btn btn-secondary btn-xs" data-action="viewAgentDetails" data-args="' + agent.id + '">' + t('agents.view') + '</button>' + (agent.balance > 0 ? '<button class="btn btn-danger btn-xs" data-action="payAgent" data-args="' + agent.id + '">' + t('agents.pay') + '</button>' : '') + '</td></tr>';
                 }).join('')}</tbody>
             </table></div>
         </div>
 
         <div class="card"><p style="color: var(--text-secondary); margin-bottom: 1rem;">${t('agents.selectAgent')} ${t('agents.requestQty')}</p>
-            <div class="form-grid"><div class="form-group"><label class="form-label">${t('agents.requestQty')}</label><input type="text" class="input-field" id="agent-request-qty" placeholder="${t('agents.enterQty')}" oninput="formatThousandsInput(this)" inputmode="numeric" pattern="[0-9.]*"></div><div class="form-group"><label class="form-label">${t('agents.selectAgent')}</label><select class="input-field" id="agent-select">${state.agents.map(function(a) { return '<option value="' + a.id + '">' + escapeHtml(a.name) + '</option>'; }).join('')}</select></div></div>
-            <div class="form-actions"><button class="btn btn-primary" onclick="submitAgentRequest()">${t('agents.sendRequest')}</button></div>
+            <div class="form-grid"><div class="form-group"><label class="form-label">${t('agents.requestQty')}</label><input type="text" class="input-field" id="agent-request-qty" placeholder="${t('agents.enterQty')}" data-input="formatThousandsInput" data-args="this" inputmode="numeric" pattern="[0-9.]*"></div><div class="form-group"><label class="form-label">${t('agents.selectAgent')}</label><select class="input-field" id="agent-select">${state.agents.map(function(a) { return '<option value="' + a.id + '">' + escapeHtml(a.name) + '</option>'; }).join('')}</select></div></div>
+            <div class="form-actions"><button class="btn btn-primary" data-action="submitAgentRequest">${t('agents.sendRequest')}</button></div>
         </div>`;
 }
 
@@ -1388,22 +1388,22 @@ function renderAgentRequestsTable() {
         let actionsHtml = '';
         if (state.currentUser.role === 'admin') {
             if (req.status === 'pending') {
-                actionsHtml = '<button class="btn btn-success btn-xs" onclick="approveAgentRequest(' + req.id + ')">' + t('agents.approveAndPay') + '</button>';
+                actionsHtml = '<button class="btn btn-success btn-xs" data-action="approveAgentRequest" data-args="' + req.id + '">' + t('agents.approveAndPay') + '</button>';
             } else if (req.status === 'delivered') {
-                actionsHtml = '<button class="btn btn-warning btn-xs" onclick="verifyAgentDelivery(' + req.id + ')">' + t('agents.confirmGenDelivered') + '</button>';
+                actionsHtml = '<button class="btn btn-warning btn-xs" data-action="verifyAgentDelivery" data-args="' + req.id + '">' + t('agents.confirmGenDelivered') + '</button>';
             } else if (req.status === 'confirmed') {
-                actionsHtml = '<button class="btn btn-primary btn-xs" onclick="verifyAgentFulfillment(' + req.id + ')">' + t('agents.adminVerify') + '</button>';
+                actionsHtml = '<button class="btn btn-primary btn-xs" data-action="verifyAgentFulfillment" data-args="' + req.id + '">' + t('agents.adminVerify') + '</button>';
             } else if (req.status === 'verified') {
-                actionsHtml = '<button class="btn btn-success btn-xs" onclick="completeAgentOrder(' + req.id + ')">' + t('agents.orderComplete') + '</button>';
+                actionsHtml = '<button class="btn btn-success btn-xs" data-action="completeAgentOrder" data-args="' + req.id + '">' + t('agents.orderComplete') + '</button>';
             }
         } else if (state.currentUser.role === 'agent') {
             if (req.status === 'approved' && prog.delivered < prog.target) {
-                actionsHtml = '<button class="btn btn-warning btn-xs" onclick="agentConfirmDelivery(' + req.id + ')">' + t('agents.genDelivered') + '</button>';
+                actionsHtml = '<button class="btn btn-warning btn-xs" data-action="agentConfirmDelivery" data-args="' + req.id + '">' + t('agents.genDelivered') + '</button>';
             } else if (req.status === 'delivered' && prog.delivered < prog.target) {
-                actionsHtml = '<button class="btn btn-warning btn-xs" onclick="agentConfirmDelivery(' + req.id + ')">' + t('agents.genDelivered') + '</button>';
+                actionsHtml = '<button class="btn btn-warning btn-xs" data-action="agentConfirmDelivery" data-args="' + req.id + '">' + t('agents.genDelivered') + '</button>';
             }
         }
-    actionsHtml += '<button class="btn btn-danger btn-xs" onclick="deleteAgentRequest(' + req.id + ')">' + t('alerts.deleteItem') + '</button>';
+    actionsHtml += '<button class="btn btn-danger btn-xs" data-action="deleteAgentRequest" data-args="' + req.id + '">' + t('alerts.deleteItem') + '</button>';
 
         tableHtml += '<tr>';
         tableHtml += '<td>' + escapeHtml(agent.name) + '</td>';
@@ -1428,7 +1428,7 @@ function showAddAgentModal() {
         { label: 'Alamat', id: 'agent-address', type: 'textarea', placeholder: 'Masukkan alamat' },
         { label: 'Tarif Komisi (opsional)', id: 'agent-commission', type: 'number', placeholder: 'Masukkan tarif %' }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" onclick="submitAddAgent()">' + t('agents.addAgent') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" data-action="submitAddAgent">' + t('agents.addAgent') + '</button>';
     showAddModal(t('alerts.addAgent'), fields, footerHtml);
 }
 
@@ -1468,7 +1468,7 @@ function viewAgentDetails(id) {
         reqsHtml + '</div>';
     document.getElementById('modal-title').textContent = t('agents.view');
     document.getElementById('modal-body').innerHTML = detailHtml;
-    document.getElementById('modal-footer').innerHTML = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button>';
+    document.getElementById('modal-footer').innerHTML = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button>';
     document.getElementById('add-modal-overlay').classList.add('active');
     document.body.classList.add('body-scroll-lock');
 }
@@ -1482,7 +1482,7 @@ function payAgent(id) {
         { label: 'Metode Pembayaran', id: 'pay-agent-method', type: 'select', options: [{ value: 'cash', label: 'Tunai' }, { value: 'transfer', label: 'Transfer Bank' }, { value: 'e-wallet', label: 'E-Wallet' }] },
         { label: 'Nomor Referensi', id: 'pay-agent-ref', type: 'text', placeholder: 'Masukkan referensi' }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" onclick="submitAgentPayment(' + agent.id + ')">' + t('agents.pay') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" data-action="submitAgentPayment" data-args="' + agent.id + '">' + t('agents.pay') + '</button>';
     showAddModal(t('alerts.payAgent'), fields, footerHtml);
 }
 
@@ -1613,11 +1613,11 @@ async function completeAgentOrder(reqId) {
 // CLIENTS PAGE
 // ========================
 function renderClients() {
-    return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('clients.myClients')}</h2><button class="btn btn-primary btn-sm" onclick="showAddClientModal()">+ ${t('clients.addClient')}</button></div>
+    return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('clients.myClients')}</h2><button class="btn btn-primary btn-sm" data-action="showAddClientModal">+ ${t('clients.addClient')}</button></div>
         <div class="table-container"><div class="table-scrollable"><table>
             <thead><tr><th>${t('clients.clientName')}</th><th>${t('clients.purchasedGen')}</th><th>${t('clients.ratePerGen')}</th><th>${t('agents.balance')}</th><th>${t('table.status')}</th><th>${t('table.actions')}</th></tr></thead>
             <tbody>${state.clients.map(function(client) {
-                return '<tr><td>' + escapeHtml(client.name) + '</td><td>' + formatNumber(client.genQty) + ' GEN</td><td>' + formatCurrency(getClientPriceFor(client.name)) + '</td><td class="text-green">' + formatCurrency(client.balance) + '</td><td><span class="status-badge status-' + client.status + '">' + client.status + '</span></td><td><button class="btn btn-secondary btn-xs" onclick="viewClientOrders(' + client.id + ')">' + t('clients.viewOrders') + '</button></td></tr>';
+                return '<tr><td>' + escapeHtml(client.name) + '</td><td>' + formatNumber(client.genQty) + ' GEN</td><td>' + formatCurrency(getClientPriceFor(client.name)) + '</td><td class="text-green">' + formatCurrency(client.balance) + '</td><td><span class="status-badge status-' + client.status + '">' + client.status + '</span></td><td><button class="btn btn-secondary btn-xs" data-action="viewClientOrders" data-args="' + client.id + '">' + t('clients.viewOrders') + '</button></td></tr>';
             }).join('')}</tbody>
         </table></div></div>
 
@@ -1635,12 +1635,12 @@ function renderClientOrderRequestsTable() {
         let actions = '';
         if (state.currentUser.role === 'admin') {
             if (req.status === 'pending') {
-                actions = '<button class="btn btn-success btn-xs" onclick="approveClientOrder(' + req.id + ')">' + t('agents.approve') + '</button>';
+                actions = '<button class="btn btn-success btn-xs" data-action="approveClientOrder" data-args="' + req.id + '">' + t('agents.approve') + '</button>';
             } else if (req.status === 'approved') {
-                actions = '<button class="btn btn-primary btn-xs" onclick="fulfillClientOrder(' + req.id + ')">' + t('agents.orderComplete') + '</button>';
+                actions = '<button class="btn btn-primary btn-xs" data-action="fulfillClientOrder" data-args="' + req.id + '">' + t('agents.orderComplete') + '</button>';
             }
         }
-        actions += '<button class="btn btn-danger btn-xs" onclick="deleteClientOrder(' + req.id + ')">' + t('alerts.deleteItem') + '</button>';
+        actions += '<button class="btn btn-danger btn-xs" data-action="deleteClientOrder" data-args="' + req.id + '">' + t('alerts.deleteItem') + '</button>';
         return '<tr><td>' + escapeHtml(req.clientName) + '</td><td>' + formatNumber(req.genQty) + ' GEN</td><td>' + formatCurrency(req.amount) + '</td><td><span class="status-badge ' + statusClass + '">' + statusLabel + '</span></td><td>' + actions + '</td></tr>';
     }).join('') + '</tbody></table></div></div>';
 }
@@ -1700,7 +1700,7 @@ function showAddClientModal() {
         { label: 'Alamat', id: 'client-address', type: 'textarea', placeholder: 'Masukkan alamat' },
         { label: 'Batas Kredit (opsional)', id: 'client-credit', type: 'number', placeholder: 'Masukkan batas' }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" onclick="submitAddClient()">' + t('clients.addClient') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" data-action="submitAddClient">' + t('clients.addClient') + '</button>';
     showAddModal(t('alerts.addClient'), fields, footerHtml);
 }
 
@@ -1728,7 +1728,7 @@ function viewClientOrders(id) {
         '<p>' + t('clients.viewOrders') + '</p>' + tableHtml + '</div>';
     document.getElementById('modal-title').textContent = escapeHtml(client.name);
     document.getElementById('modal-body').innerHTML = detailHtml;
-    document.getElementById('modal-footer').innerHTML = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button>';
+    document.getElementById('modal-footer').innerHTML = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button>';
     document.getElementById('add-modal-overlay').classList.add('active');
     document.body.classList.add('body-scroll-lock');
 }
@@ -2104,14 +2104,14 @@ function renderReports() {
     const chartColors = salesData.map(function(v, i) { return i % 2 === 0 ? '#4ade80' : '#fbbf24'; });
 
     return `<div class="filter-bar" style="margin-bottom: 1.5rem;">
-        <div class="form-group" style="min-width: 140px;"><label class="form-label">${t('reports.dateRange')}</label><select class="input-field" id="report-date-filter" onchange="filterReports()">
+        <div class="form-group" style="min-width: 140px;"><label class="form-label">${t('reports.dateRange')}</label><select class="input-field" id="report-date-filter" data-change="filterReports">
             <option value="all" ${reportFilter === 'all' ? 'selected' : ''}>${t('reports.allData')}</option>
             <option value="week" ${reportFilter === 'week' ? 'selected' : ''}>${t('alerts.week')}</option>
             <option value="month" ${reportFilter === 'month' ? 'selected' : ''}>${t('alerts.month')}</option>
             <option value="last_month" ${reportFilter === 'last_month' ? 'selected' : ''}>${t('alerts.lastMonth')}</option>
             <option value="today" ${reportFilter === 'today' ? 'selected' : ''}>${t('alerts.today')}</option>
         </select></div>
-        <button class="btn btn-secondary btn-sm" onclick="exportToExcel()">${t('reports.exportExcel')}</button>
+        <button class="btn btn-secondary btn-sm" data-action="exportToExcel">${t('reports.exportExcel')}</button>
     </div>
     <div class="widgets-grid" style="margin-bottom: 2rem;">
         <div class="widget"><div class="widget-header"><span class="widget-title">${t('reports.profitMargin')}</span></div><div class="widget-value text-green">${financial.profitMargin}%</div><div class="widget-change">${t('reports.basedOn')} ${filteredTrans.length} ${t('reports.transactions')}</div></div>
@@ -2230,8 +2230,8 @@ function renderUsers() {
     if (state.currentUser.role !== 'admin') {
         return '<div class="card" style="text-align: center; padding: 3rem;"><h3 style="color: var(--accent-red); margin-bottom: 1rem;">' + t('users.accessDenied') + '</h3><p style="color: var(--text-secondary);">' + t('users.adminOnly') + '</p></div>';
     }
-    return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('users.userManagement')}</h2><button class="btn btn-primary btn-sm" onclick="showAddUserModal()">+ ${t('users.addUser')}</button></div>
-        <div class="filter-bar"><div class="form-group"><label class="form-label">${t('users.role')}</label><select class="input-field" id="filter-user-role" onchange="filterUsers()"><option value="">${t('alerts.filterAll')}</option><option value="admin">${t('users.admins')}</option><option value="client">${t('users.clients')}</option><option value="agent">${t('users.agents')}</option></select></div><button class="btn btn-secondary btn-sm" onclick="clearUserFilters()">${t('alerts.filterClear')}</button></div>
+    return `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;"><h2 style="font-size: 1.3rem; color: var(--white);">${t('users.userManagement')}</h2><button class="btn btn-primary btn-sm" data-action="showAddUserModal">+ ${t('users.addUser')}</button></div>
+        <div class="filter-bar"><div class="form-group"><label class="form-label">${t('users.role')}</label><select class="input-field" id="filter-user-role" data-change="filterUsers"><option value="">${t('alerts.filterAll')}</option><option value="admin">${t('users.admins')}</option><option value="client">${t('users.clients')}</option><option value="agent">${t('users.agents')}</option></select></div><button class="btn btn-secondary btn-sm" data-action="clearUserFilters">${t('alerts.filterClear')}</button></div>
         <div class="table-container"><div class="table-scrollable"><table>
             <thead><tr><th>${t('users.user')}</th><th>${t('users.email')}</th><th>${t('users.role')}</th><th>${t('table.status')}</th><th>${t('table.actions')}</th></tr></thead>
             <tbody id="users-tbody">${renderUsersTable(state.users)}</tbody>
@@ -2243,7 +2243,7 @@ function renderUsersTable(users) {
     return users.map(function(u) {
         const avatar = u.avatar || u.name.charAt(0);
         const roleColors = { admin: 'role-admin', client: 'role-client', agent: 'role-agent' };
-        return '<tr><td><div style="display: flex; align-items: center; gap: 0.75rem;"><div class="user-avatar" style="background: linear-gradient(135deg, var(--accent-blue), #3b82f6);">' + escapeHtml(avatar) + '</div>' + escapeHtml(u.name) + '</div></td><td>' + escapeHtml(u.email) + '</td><td><span class="user-role-badge ' + roleColors[u.role] + '">' + (u.role === 'admin' ? t('users.admins') : u.role === 'client' ? t('users.clients') : t('users.agents')) + '</span></td><td><span class="status-badge status-completed">' + t('users.active') + '</span></td><td><button class="btn btn-secondary btn-xs" onclick="editUser(' + u.id + ')">' + t('users.edit') + '</button><button class="btn btn-danger btn-xs" onclick="deleteUser(' + u.id + ')">' + t('alerts.deleteItem') + '</button></td></tr>';
+        return '<tr><td><div style="display: flex; align-items: center; gap: 0.75rem;"><div class="user-avatar" style="background: linear-gradient(135deg, var(--accent-blue), #3b82f6);">' + escapeHtml(avatar) + '</div>' + escapeHtml(u.name) + '</div></td><td>' + escapeHtml(u.email) + '</td><td><span class="user-role-badge ' + roleColors[u.role] + '">' + (u.role === 'admin' ? t('users.admins') : u.role === 'client' ? t('users.clients') : t('users.agents')) + '</span></td><td><span class="status-badge status-completed">' + t('users.active') + '</span></td><td><button class="btn btn-secondary btn-xs" data-action="editUser" data-args="' + u.id + '">' + t('users.edit') + '</button><button class="btn btn-danger btn-xs" data-action="deleteUser" data-args="' + u.id + '">' + t('alerts.deleteItem') + '</button></td></tr>';
     }).join('');
 }
 
@@ -2256,7 +2256,7 @@ function showAddUserModal() {
         { label: t('users.phone'), id: 'user-phone', type: 'tel', placeholder: t('users.phoneHint') },
         { label: t('users.password'), id: 'user-password', type: 'password', placeholder: t('users.passwordHint') }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" onclick="submitAddUser()">' + t('users.addUser') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button><button class="btn btn-primary" data-action="submitAddUser">' + t('users.addUser') + '</button>';
     showAddModal(t('alerts.addUser'), fields, footerHtml);
 }
 
@@ -2294,8 +2294,8 @@ function editUser(id) {
         { label: t('users.phone'), id: 'user-phone', type: 'tel', placeholder: t('users.phoneHint'), value: user.phone || '' },
         { label: t('users.password'), id: 'user-password', type: 'password', placeholder: t('users.passwordHintEdit'), value: '' }
     ];
-    const footerHtml = '<button class="btn btn-secondary" onclick="closeAddModal()">' + t('alerts.filterClear') + '</button>' +
-        '<button class="btn btn-primary" onclick="saveUserEdit(' + id + ')">' + t('users.save') + '</button>';
+    const footerHtml = '<button class="btn btn-secondary" data-action="closeAddModal">' + t('alerts.filterClear') + '</button>' +
+        '<button class="btn btn-primary" data-action="saveUserEdit" data-args="' + id + '">' + t('users.save') + '</button>';
     showAddModal(t('users.edit'), fields, footerHtml);
 }
 
@@ -2349,21 +2349,21 @@ function renderSettings() {
 
     return `<div class="table-container"><div class="table-header"><div class="table-title">${t('settings.pricingConfig')}</div></div><div style="padding: 1.5rem;">
         <div class="form-grid">
-            <div class="form-group"><label class="form-label">${t('settings.clientPrice')}</label><input type="text" class="input-field" id="client-price" value="${formatNumber(state.prices.clientPricePerGen)}" inputmode="numeric" pattern="[0-9.]*" oninput="formatThousandsInput(this)"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.clientPriceDesc')}</p></div>
-            <div class="form-group"><label class="form-label">${t('settings.agentPrice')}</label><input type="text" class="input-field" id="agent-price" value="${formatNumber(state.prices.agentPricePerGen)}" inputmode="numeric" pattern="[0-9.]*" oninput="formatThousandsInput(this)"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.agentPriceDesc')}</p></div>
-            <div class="form-group"><label class="form-label">${t('settings.supplierPrice')}</label><input type="text" class="input-field" id="supplier-price" value="${formatNumber(state.prices.supplierPricePerGen)}" inputmode="numeric" pattern="[0-9.]*" oninput="formatThousandsInput(this)"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.supplierPriceDesc')}</p></div>
-            <div class="form-group"><label class="form-label">${t('settings.dieselPrice')}</label><input type="text" class="input-field" id="diesel-price" value="${formatNumber(state.prices.dieselPricePerLiter)}" inputmode="numeric" pattern="[0-9.]*" oninput="formatThousandsInput(this)"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.dieselPriceDesc')}</p></div>
-            <div class="form-group"><label class="form-label">${t('settings.litersPerGen')}</label><input type="text" class="input-field" id="liters-per-gen" value="${formatNumber(state.prices.litersPerGen)}" inputmode="numeric" pattern="[0-9.]*" oninput="formatThousandsInput(this)"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.litersPerGenDesc')}</p></div>
+            <div class="form-group"><label class="form-label">${t('settings.clientPrice')}</label><input type="text" class="input-field" id="client-price" value="${formatNumber(state.prices.clientPricePerGen)}" inputmode="numeric" pattern="[0-9.]*" data-input="formatThousandsInput" data-args="this"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.clientPriceDesc')}</p></div>
+            <div class="form-group"><label class="form-label">${t('settings.agentPrice')}</label><input type="text" class="input-field" id="agent-price" value="${formatNumber(state.prices.agentPricePerGen)}" inputmode="numeric" pattern="[0-9.]*" data-input="formatThousandsInput" data-args="this"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.agentPriceDesc')}</p></div>
+            <div class="form-group"><label class="form-label">${t('settings.supplierPrice')}</label><input type="text" class="input-field" id="supplier-price" value="${formatNumber(state.prices.supplierPricePerGen)}" inputmode="numeric" pattern="[0-9.]*" data-input="formatThousandsInput" data-args="this"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.supplierPriceDesc')}</p></div>
+            <div class="form-group"><label class="form-label">${t('settings.dieselPrice')}</label><input type="text" class="input-field" id="diesel-price" value="${formatNumber(state.prices.dieselPricePerLiter)}" inputmode="numeric" pattern="[0-9.]*" data-input="formatThousandsInput" data-args="this"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.dieselPriceDesc')}</p></div>
+            <div class="form-group"><label class="form-label">${t('settings.litersPerGen')}</label><input type="text" class="input-field" id="liters-per-gen" value="${formatNumber(state.prices.litersPerGen)}" inputmode="numeric" pattern="[0-9.]*" data-input="formatThousandsInput" data-args="this"><p style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 0.25rem;">${t('settings.litersPerGenDesc')}</p></div>
             <div class="form-group"><label class="form-label">${t('settings.profitMargin')}</label><div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--accent-green); font-weight: 600;">Rp ${profitPerGen.toLocaleString('id-ID')} / GEN<br><div style="font-size: 0.65rem; color: var(--text-tertiary); margin-top: 0.25rem;">${t('settings.profitDiff')}</div></div></div>
         </div>
-        <div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">${t('settings.saveConfig')}</button><button class="btn btn-secondary" onclick="resetSettings()">${t('settings.reset')}</button></div>
+        <div class="form-actions"><button class="btn btn-primary" data-action="saveSettings">${t('settings.saveConfig')}</button><button class="btn btn-secondary" data-action="resetSettings">${t('settings.reset')}</button></div>
     </div></div>
     <div class="table-container"><div class="table-header"><div class="table-title">${t('settings.preferences')}</div></div><div style="padding: 1.5rem;"><div class="form-grid">
         <div class="form-group"><label class="form-label">${t('settings.currency')}</label><select class="input-field" id="pref-currency"><option value="IDR" ${state.preferences.currency === 'IDR' ? 'selected' : ''}>IDR - Rupiah</option></select></div>
         <div class="form-group"><label class="form-label">${t('settings.measurementUnit')}</label><select class="input-field" id="pref-measurement"><option value="GEN" ${state.preferences.measurementUnit === 'GEN' ? 'selected' : ''}>GEN (Standar)</option><option value="Liters" ${state.preferences.measurementUnit === 'Liters' ? 'selected' : ''}>${t('settings.litersOnly')}</option></select></div>
         <div class="form-group"><label class="form-label">${t('settings.language')}</label><select class="input-field" id="pref-language"><option value="en" ${state.preferences.language === 'en' ? 'selected' : ''}>English</option><option value="id" ${state.preferences.language === 'id' ? 'selected' : ''}>Bahasa Indonesia</option></select></div>
         <div class="form-group"><label class="form-label">${t('settings.dateFormat')}</label><select class="input-field" id="pref-date-format"><option value="YYYY-MM-DD" ${state.preferences.dateFormat === 'YYYY-MM-DD' ? 'selected' : ''}>YYYY-MM-DD</option><option value="DD/MM/YYYY" ${state.preferences.dateFormat === 'DD/MM/YYYY' ? 'selected' : ''}>DD/MM/YYYY</option><option value="MM/DD/YYYY" ${state.preferences.dateFormat === 'MM/DD/YYYY' ? 'selected' : ''}>MM/DD/YYYY</option></select></div>
-    </div><div class="form-actions"><button class="btn btn-primary" onclick="savePreferences()">${t('settings.savePrefs')}</button></div></div></div>
+    </div><div class="form-actions"><button class="btn btn-primary" data-action="savePreferences">${t('settings.savePrefs')}</button></div></div></div>
     </div>
     <div class="table-container" style="margin-bottom: 2rem;">
         <div class="table-header"><div class="table-title" style="color: var(--accent-red);">${t('settings.deleteDatabase')}</div></div>
@@ -2399,8 +2399,8 @@ function renderSettings() {
                 </div>
             </div>
             <div class="form-actions">
-                <button class="btn btn-secondary" onclick="cancelDeleteDatabase()">${t('alerts.filterClear')}</button>
-                <button class="btn btn-danger" onclick="showDeleteDatabaseConfirm()">${t('settings.deleteBtn')}</button>
+                <button class="btn btn-secondary" data-action="cancelDeleteDatabase">${t('alerts.filterClear')}</button>
+                <button class="btn btn-danger" data-action="showDeleteDatabaseConfirm">${t('settings.deleteBtn')}</button>
             </div>
         </div>
     </div>`;
@@ -2554,10 +2554,10 @@ function renderRequestOrder() {
         </div>
         <div class="card"><h3 style="margin-bottom: 1rem; color: var(--white); font-size: 1.1rem;">${t('clients.enterGenQty')}</h3>
             <div class="form-grid">
-                <div class="form-group"><label class="form-label">${t('table.quantity')} (GEN)</label><input type="text" class="input-field" id="client-order-qty" placeholder="${t('clients.enterGenQty')}" oninput="formatThousandsInput(this); updateClientOrderAmount()" inputmode="numeric" pattern="[0-9.]*"></div>
+                <div class="form-group"><label class="form-label">${t('table.quantity')} (GEN)</label><input type="text" class="input-field" id="client-order-qty" placeholder="${t('clients.enterGenQty')}" data-input="formatThousandsInput(this); updateClientOrderAmount()" inputmode="numeric" pattern="[0-9.]*"></div>
                 <div class="form-group"><label class="form-label">${t('clients.totalToPay')}</label><div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--accent-green); font-weight: 600;" id="client-order-amount">Rp 0</div></div>
             </div>
-            <div class="form-actions"><button class="btn btn-primary" onclick="submitClientOrder()">${t('clients.requestSubmitted')}</button></div>
+            <div class="form-actions"><button class="btn btn-primary" data-action="submitClientOrder">${t('clients.requestSubmitted')}</button></div>
         </div>
 
         ${renderMyClientRequests()}
@@ -2627,7 +2627,7 @@ function renderRequestGen() {
         </div>
         <div class="table-container" style="margin-bottom: 2rem;">
             <div class="table-header"><div class="table-title">${t('dashboard.myTransactions')}</div><div class="table-actions">
-                <select class="input-field" style="width: 140px; padding: 0.4rem 0.65rem; font-size: 0.8rem;" id="agent-trans-filter" onchange="filterAgentTransactions()">
+                <select class="input-field" style="width: 140px; padding: 0.4rem 0.65rem; font-size: 0.8rem;" id="agent-trans-filter" data-change="filterAgentTransactions">
                     <option value="week">${t('alerts.week')}</option>
                     <option value="month">${t('alerts.month')}</option>
                     <option value="last_month">${t('alerts.lastMonth')}</option>
@@ -2640,10 +2640,10 @@ function renderRequestGen() {
         </div>
         <div class="card"><h3 style="margin-bottom: 1rem; color: var(--white); font-size: 1.1rem;">${t('agents.dieselRequest')}</h3><p style="color: var(--text-secondary); margin-bottom: 1rem;">${t('agents.requestQty')}: ${formatCurrency(state.prices.agentPricePerGen)} / GEN</p>
             <div class="form-grid">
-                <div class="form-group"><label class="form-label">${t('table.quantity')} (GEN)</label><input type="text" class="input-field" id="agent-gen-request-qty" placeholder="${t('agents.enterQty')}" oninput="formatThousandsInput(this); updateGenRequestAmount()" inputmode="numeric" pattern="[0-9.]*"></div>
+                <div class="form-group"><label class="form-label">${t('table.quantity')} (GEN)</label><input type="text" class="input-field" id="agent-gen-request-qty" placeholder="${t('agents.enterQty')}" data-input="formatThousandsInput(this); updateGenRequestAmount()" inputmode="numeric" pattern="[0-9.]*"></div>
                 <div class="form-group"><label class="form-label">${t('clients.totalToPay')}</label><div style="background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--accent-green); font-weight: 600;" id="agent-gen-request-amount">Rp 0</div></div>
             </div>
-            <div class="form-actions"><button class="btn btn-primary" onclick="submitGenRequest()">${t('agents.sendRequest')}</button></div>
+            <div class="form-actions"><button class="btn btn-primary" data-action="submitGenRequest">${t('agents.sendRequest')}</button></div>
         </div>
 
         ${renderMyAgentRequests()}
@@ -2664,9 +2664,9 @@ function renderMyAgentRequests() {
         const statusLabel = req.status === 'pending' ? t('agents.orderPending') : req.status === 'approved' ? t('agents.orderApproved') : req.status === 'delivered' ? t('agents.orderDelivered') : req.status === 'confirmed' ? t('agents.orderConfirmed') : req.status === 'verified' ? t('agents.verify') : req.status === 'completed' ? t('agents.orderComplete') : req.status === 'rejected' ? t('agents.rejected') : req.status;
         let actionHtml = '';
         if (req.status === 'approved' && prog.delivered < prog.target) {
-            actionHtml = '<button class="btn btn-warning btn-xs" onclick="agentConfirmDelivery(' + req.id + ')">' + t('agents.genDelivered') + '</button>';
+            actionHtml = '<button class="btn btn-warning btn-xs" data-action="agentConfirmDelivery" data-args="' + req.id + '">' + t('agents.genDelivered') + '</button>';
         } else if (req.status === 'delivered' && prog.delivered < prog.target) {
-            actionHtml = '<button class="btn btn-warning btn-xs" onclick="agentConfirmDelivery(' + req.id + ')">' + t('agents.genDelivered') + '</button>';
+            actionHtml = '<button class="btn btn-warning btn-xs" data-action="agentConfirmDelivery" data-args="' + req.id + '">' + t('agents.genDelivered') + '</button>';
         } else if (req.status === 'delivered') {
             actionHtml = '<span style="color:var(--text-tertiary);font-size:0.8rem;">' + t('agents.awaitingConfirm') + '</span>';
         } else if (req.status === 'confirmed' || req.status === 'verified' || req.status === 'completed') {
@@ -3064,6 +3064,14 @@ async function initAuth() {
     state.currentPage = 'login';
 }
 
+
+// Register service worker (moved from inline <script> to satisfy CSP)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function(e) {
+        console.error('SW register failed:', e);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadFromLocalStorage();
     initAuth().then(function() {
@@ -3097,8 +3105,103 @@ document.addEventListener('keydown', function(e) {
 // expose only the entry points those inline handlers actually call onto
 // `window`. (Audit: 47 distinct call sites - loginUser + saveUserEdit added).)
 //
-// TODO(next): replace inline handlers with a single delegated
-// addEventListener listener on #content-area / #sidebar, then DELETE this shim.
+// CSP-safe event delegation + module compatibility shim.
+// (Inline onclick removed; replaced with data-action + delegated click listener.)
+
+// ===================================================================
+// CSP-SAFE EVENT DELEGATION
+// ===================================================================
+// VibeKit's Cloudflare CSP sets script-src-attr 'none', which blocks all
+// inline data-action="..." handlers. We replace them with data-action="fnName"
+// data-args="arg1, arg2" attributes and use a single delegated click listener.
+//
+// Supported arg formats:
+//   data-action="loginUser"                      -> loginUser()
+//   data-action="editUser" data-args="123"       -> editUser(123)
+//   data-action="editUser" data-args="' + id + '" -> editUser(id)  (dynamic)
+// ===================================================================
+// ===================================================================
+// CSP-SAFE EVENT DELEGATION
+// ===================================================================
+// VibeKit's Cloudflare CSP sets script-src-attr 'none', blocking all
+// inline event handlers (onclick, onchange, oninput). We replace them
+// with data-action / data-change / data-input attributes and use a single
+// delegated listener. Multi-function calls (separated by ;) are supported.
+// `this` in data-args is replaced with the element reference.
+// ===================================================================
+
+function _evalArgs(argsStr, el) {
+    var expr = argsStr.replace(/\bthis\b/g, 'el');
+    return eval('(' + expr + ')');
+}
+
+function _invokeHandler(handlerStr, el, eventName) {
+    var fnCalls = handlerStr.split(';').filter(function(c) { return c.trim(); });
+    fnCalls.forEach(function(call) {
+        call = call.trim();
+        var m = call.match(/^(\w+)\s*\((.*)\)\s*$/);
+        if (m) {
+            var fn = m[1], argsExpr = m[2].trim();
+            if (window[fn] && typeof window[fn] === 'function') {
+                try {
+                    if (argsExpr) {
+                        var parsed = _evalArgs(argsExpr, el);
+                        if (Array.isArray(parsed)) window[fn].apply(null, parsed);
+                        else if (parsed !== undefined) window[fn].call(null, parsed);
+                        else window[fn]();
+                    } else {
+                        window[fn]();
+                    }
+                } catch(e) { console.error(eventName + ' ' + fn + ' failed:', e); }
+            }
+        } else {
+            if (window[call] && typeof window[call] === 'function') { try { window[call](); } catch(e) {} }
+        }
+    });
+}
+
+document.addEventListener('click', function(e) {
+    var target = e.target;
+    while (target && target !== document) {
+        if (target.hasAttribute && target.hasAttribute('data-action')) {
+            e.preventDefault();
+            e.stopPropagation();
+            var action = target.getAttribute('data-action');
+            var argsStr = target.getAttribute('data-args') || '';
+            if (argsStr) _invokeHandler(action + '(' + argsStr + ')', target, 'click');
+            else _invokeHandler(action, target, 'click');
+            return;
+        }
+        target = target.parentElement;
+    }
+});
+
+document.addEventListener('change', function(e) {
+    var target = e.target;
+    while (target && target !== document) {
+        if (target.hasAttribute && target.hasAttribute('data-change')) {
+            var action = target.getAttribute('data-change');
+            var argsStr = target.getAttribute('data-args') || '';
+            if (argsStr) _invokeHandler(action + '(' + argsStr + ')', target, 'change');
+            else _invokeHandler(action, target, 'change');
+        }
+        target = target.parentElement;
+    }
+});
+
+document.addEventListener('input', function(e) {
+    var target = e.target;
+    while (target && target !== document) {
+        if (target.hasAttribute && target.hasAttribute('data-input')) {
+            var action = target.getAttribute('data-input');
+            var argsStr = target.getAttribute('data-args') || '';
+            if (argsStr) _invokeHandler(action + '(' + argsStr + ')', target, 'input');
+            else _invokeHandler(action, target, 'input');
+        }
+        target = target.parentElement;
+    }
+});
+
 const _inlineApi = {
     toggleSidebar,
     toggleProfileDropdown,
